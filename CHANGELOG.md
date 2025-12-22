@@ -2,7 +2,13 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
-## [1.1.0] - 2024-12-22
+## [1.1.2] - 2025-12-22
+
+### Added
+- Now available on [Open VSX Registry](https://open-vsx.org/extension/ezoosk/claude-context-bar) for Antigravity, VSCodium, and other VS Code forks
+- Automated dual-publishing to both VS Code Marketplace and Open VSX
+
+## [1.1.0] - 2025-12-22
 
 ### Added
 - **Auto Color Mode**: Pastel color palette assigns different colors to each project automatically
@@ -13,7 +19,7 @@ All notable changes to the Claude Context Bar extension will be documented in th
 ### Changed
 - Color palette changed to softer pastel colors for better readability
 
-## [1.0.0] - 2024-12-22
+## [1.0.0] - 2025-12-22
 
 ### Added
 - Real-time context window usage monitoring for Claude Code sessions

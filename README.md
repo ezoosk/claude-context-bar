@@ -30,7 +30,9 @@
 - VS Code 1.74.0 or later
 - [Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) extension installed and active
 
-**[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ezoosk.claude-context-bar)**
+**Install:**
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ezoosk.claude-context-bar)
+- [Open VSX Registry](https://open-vsx.org/extension/ezoosk/claude-context-bar) (for Antigravity, VSCodium, etc.)
 
 ## Configuration
 
@@ -54,4 +56,4 @@ Sessions inactive for more than 5 minutes are automatically hidden.
 
 ## License
 
-MIT © [Ed Zisk](https://github.com/ezoosk)
+MIT © 2025 [Ed Zisk](https://github.com/ezoosk)
