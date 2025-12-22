@@ -28,7 +28,7 @@
 ## Requirements
 
 - VS Code 1.74.0 or later
-- [Claude Code](https://claude.ai/code) extension installed and active
+- [Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) extension installed and active
 
 **[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ezoosk.claude-context-bar)**
 
