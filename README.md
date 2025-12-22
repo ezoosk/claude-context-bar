@@ -25,7 +25,7 @@
 
 - VS Code 1.74.0 or later
 - [Claude Code](https://claude.ai/code) extension installed and active
-- Install Extension(https://marketplace.visualstudio.com/items?itemName%3Dezoosk.claude-context-bar)
+- [Install Extension](https://marketplace.visualstudio.com/items?itemName%3Dezoosk.claude-context-bar)
 
 ## Configuration
 
