@@ -130,6 +130,62 @@ function getContextLimitForModel(model: string, userLimit: number): number {
     return userLimit;
 }
 
+// Fuzzy emoji matching based on project name
+function getEmojiForProject(projectName: string): string {
+    const name = projectName.toLowerCase();
+
+    // Emoji mappings with keywords
+    const emojiMap: [string[], string][] = [
+        // Music & Audio
+        [['music', 'audio', 'sound', 'song', 'beat', 'dj', 'ableton', 'daw', 'synth', 'midi', 'tone', 'rhythm'], '🎵'],
+        // Games
+        [['game', 'play', 'unity', 'unreal', 'godot', 'arcade', 'puzzle'], '🎮'],
+        // Web & Frontend
+        [['web', 'website', 'frontend', 'react', 'vue', 'angular', 'html', 'css', 'ui', 'ux'], '🌐'],
+        // Backend & API
+        [['api', 'backend', 'server', 'rest', 'graphql', 'microservice'], '⚙️'],
+        // Mobile
+        [['mobile', 'ios', 'android', 'app', 'flutter', 'react-native', 'swift', 'kotlin'], '📱'],
+        // Data & ML
+        [['data', 'ml', 'ai', 'machine', 'learning', 'model', 'train', 'neural', 'tensor'], '🤖'],
+        // Database
+        [['database', 'db', 'sql', 'mongo', 'postgres', 'mysql', 'redis'], '🗄️'],
+        // DevOps & Cloud
+        [['devops', 'cloud', 'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'k8s', 'deploy'], '☁️'],
+        // Security
+        [['security', 'auth', 'crypto', 'encrypt', 'password', 'oauth'], '🔐'],
+        // Testing
+        [['test', 'spec', 'jest', 'mocha', 'cypress', 'selenium'], '🧪'],
+        // Documentation
+        [['doc', 'docs', 'readme', 'wiki', 'guide', 'tutorial'], '📚'],
+        // Tools & Extensions
+        [['tool', 'extension', 'plugin', 'vscode', 'editor'], '🔧'],
+        // Chat & Communication
+        [['chat', 'message', 'slack', 'discord', 'bot'], '💬'],
+        // Finance
+        [['finance', 'money', 'payment', 'bank', 'crypto', 'trade'], '💰'],
+        // Health
+        [['health', 'medical', 'fitness', 'workout'], '❤️'],
+        // E-commerce
+        [['shop', 'store', 'ecommerce', 'cart', 'product'], '🛒'],
+        // Media & Video
+        [['video', 'stream', 'youtube', 'media', 'film', 'movie'], '🎬'],
+        // Art & Design
+        [['art', 'design', 'draw', 'paint', 'sketch', 'creative', 'graphic'], '🎨'],
+    ];
+
+    for (const [keywords, emoji] of emojiMap) {
+        for (const keyword of keywords) {
+            if (name.includes(keyword)) {
+                return emoji;
+            }
+        }
+    }
+
+    // Default brain emoji for coding/AI projects
+    return '🧠';
+}
+
 async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
     return new Promise((resolve) => {
         try {
@@ -269,6 +325,7 @@ async function refreshAllSessions() {
     const contextLimit = config.get<number>('contextLimit', 200000);
     const autoColor = config.get<boolean>('autoColor', true);
     const baseColor = config.get<string>('baseColor', 'White');
+    const showEmoji = config.get<boolean>('showEmoji', true);
 
     // Pastel color palette for auto-coloring
     const pastelPalette = [
@@ -341,9 +398,10 @@ async function refreshAllSessions() {
             statusBarItems.set(session.sessionFile, entry);
         }
 
-        // Update the status bar item
-        const icon = '🧠';
-        entry.item.text = `${icon} ${session.projectName}: ${session.percentage}%`;
+        // Update the status bar item with fuzzy emoji matching
+        const icon = showEmoji ? getEmojiForProject(session.projectName) : '';
+        const iconSpace = showEmoji ? ' ' : '';
+        entry.item.text = `${icon}${iconSpace}${session.projectName}: ${session.percentage}%`;
 
         // Set background color based on thresholds
         if (session.percentage >= dangerThreshold) {
