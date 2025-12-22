@@ -2,8 +2,6 @@
 
 **Real-time context window monitor for Claude Code sessions in VS Code**
 
-![Demo](images/demo.png)
-
 ## Features
 
 🧠 **Live Context Tracking** — See your Claude Code context usage percentage right in the status bar
@@ -43,4 +41,4 @@ The extension reads Claude Code's session files from `~/.claude/projects/` and c
 
 ## License
 
-MIT © [Ed Mackey](https://github.com/thedotmack)
+MIT © [Ed Zisk](https://github.com/ezoosk)

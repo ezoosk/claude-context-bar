@@ -5,17 +5,17 @@
     "version": "1.0.0",
     "publisher": "ezscape",
     "author": {
-        "name": "Ed Mackey",
-        "url": "https://github.com/thedotmack"
+        "name": "Ed Zisk",
+        "url": "https://github.com/ezoosk"
     },
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/thedotmack/claude-context-bar"
+        "url": "https://github.com/ezoosk/claude-context-bar"
     },
-    "homepage": "https://github.com/thedotmack/claude-context-bar#readme",
+    "homepage": "https://github.com/ezoosk/claude-context-bar#readme",
     "bugs": {
-        "url": "https://github.com/thedotmack/claude-context-bar/issues"
+        "url": "https://github.com/ezoosk/claude-context-bar/issues"
     },
     "icon": "images/icon.png",
     "galleryBanner": {
