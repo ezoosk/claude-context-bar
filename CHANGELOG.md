@@ -2,6 +2,13 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.1.3] - 2025-12-22
+
+### Added
+- **Fuzzy Emoji Matching**: Icons automatically match project type based on name keywords
+  - Music projects (🎵), games (🎮), web (🌐), mobile (📱), AI (🤖), and more
+- `showEmoji` setting to toggle emoji display on/off (default: on)
+
 ## [1.1.2] - 2025-12-22
 
 ### Added

@@ -8,6 +8,15 @@
 
 ⚡ **Per-Tab Monitoring** — Each Claude Code tab gets its own context indicator
 
+🎯 **Fuzzy Emoji Matching** — Icons automatically match your project type based on name keywords:
+- 🎵 Music/audio projects
+- 🎮 Games
+- 🌐 Web/frontend
+- 📱 Mobile apps
+- 🤖 AI/ML projects
+- 🔧 Tools/extensions
+- And many more...
+
 🎨 **Auto Color Mode** — Each project automatically gets a unique pastel color for easy identification
 
 🔍 **Smart Context Detection** — Automatically detects your model (Sonnet 4.5 1M vs others) and adjusts the context limit accordingly
@@ -38,6 +47,7 @@
 
 | Setting | Default | Description |
 |---------|---------|-------------|
+| `claudeContextBar.showEmoji` | `true` | Show emoji icons based on project name keywords |
 | `claudeContextBar.autoColor` | `true` | Automatically assign unique pastel colors to each project |
 | `claudeContextBar.baseColor` | `White` | Base color when Auto Color is off (subtle variations per project) |
 | `claudeContextBar.contextLimit` | `200000` | Fallback context limit (auto-detected for most models) |
