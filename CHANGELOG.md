@@ -2,6 +2,18 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.2.0] - 2025-12-22
+
+### Added
+- **Smart Session Detection**: Automatically detects and hides "ghost" sessions
+  - Sessions are hidden immediately when superseded by a newer session
+  - Properly handles `/clear` command scenarios
+  - No more lingering status bar items from closed tabs
+
+### Fixed
+- Ghost sessions no longer appear after running `/clear` and continuing work
+- Improved session lifecycle tracking using creation timestamps
+
 ## [1.1.3] - 2025-12-22
 
 ### Added

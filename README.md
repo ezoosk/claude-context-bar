@@ -34,6 +34,8 @@
 
 🔄 **Auto-Refresh** — Updates automatically when sessions change or every 30 seconds
 
+🧹 **Smart Session Detection** — Automatically hides "ghost" sessions when you close tabs or run `/clear`
+
 ## Requirements
 
 - VS Code 1.74.0 or later
@@ -62,7 +64,7 @@ The extension reads Claude Code's session files from `~/.claude/projects/` and c
 - **Claude Sonnet 4.5 1M**: 1,000,000 tokens
 - **All other models** (Sonnet 4.5, Opus 4.5, Haiku): 200,000 tokens
 
-Sessions inactive for more than 5 minutes are automatically hidden.
+Sessions inactive for more than 5 minutes are automatically hidden. The extension also detects when sessions have been superseded by newer ones (e.g., after running `/clear` and opening a new tab), hiding ghost sessions immediately.
 
 ## License
 

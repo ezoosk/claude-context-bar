@@ -17,6 +17,9 @@ interface SessionInfo {
     lastUpdated: Date;
     model: string;
     contextLimit: number;
+    firstMessage: string;
+    sessionCreated: Date | null;
+    wasCleared: boolean;
 }
 
 interface StatusBarEntry {
@@ -85,29 +88,51 @@ function getClaudeProjectsDir(): string {
 }
 
 function decodeProjectPath(encodedName: string): { name: string; fullPath: string } {
-    // Claude encodes paths like: -c-dev-Abletron or -Users-Ed-work-MyApp
-    // Convert back to readable path
+    // Claude encodes paths like: -c-dev-amaran-light-bot or -Users-Ed-work-my-project
+    // The dashes represent path separators, BUT folder names can also contain dashes
+    // 
+    // Strategy: Detect OS from the pattern and reconstruct path
     let decoded = encodedName;
 
-    // Replace leading dash and subsequent dashes with path separators
+    // Remove leading dash
     if (decoded.startsWith('-')) {
         decoded = decoded.substring(1);
     }
 
-    // Split by dashes, but be smart about drive letters on Windows
+    // Split by dashes
     const parts = decoded.split('-');
     let fullPath: string;
+    let projectName: string;
 
+    // Check if Windows pattern (first part is single drive letter like 'c', 'd', etc.)
     if (parts.length > 0 && parts[0].length === 1 && /[a-zA-Z]/.test(parts[0])) {
-        // Windows path: first part is drive letter
+        // Windows path: C:\dev\amaran-light-bot
+        // Claude typically encodes as: -c-dev-amaran-light-bot
+        // We need at least 2 parts for drive + first folder
         fullPath = parts[0].toUpperCase() + ':\\' + parts.slice(1).join('\\');
-    } else {
-        // Unix path
-        fullPath = '/' + parts.join('/');
-    }
 
-    // Get just the project folder name (last segment)
-    const projectName = parts[parts.length - 1] || 'Unknown';
+        // Project name: use last 3 parts joined with dashes (handles names like amaran-light-bot)
+        // This is a heuristic - most project names are 1-3 dash-separated words
+        if (parts.length >= 3) {
+            // Take everything after drive + first folder (usually 'dev' or 'Users')
+            const projectParts = parts.slice(2);
+            projectName = projectParts.join('-');
+        } else {
+            projectName = parts[parts.length - 1] || 'Unknown';
+        }
+    } else {
+        // Unix path: /Users/Ed/work/my-project
+        fullPath = '/' + parts.join('/');
+
+        // Similar heuristic for Unix
+        if (parts.length >= 3) {
+            // Skip common prefixes like Users, home, etc.
+            const projectParts = parts.slice(Math.max(2, parts.length - 3));
+            projectName = projectParts.join('-');
+        } else {
+            projectName = parts[parts.length - 1] || 'Unknown';
+        }
+    }
 
     return { name: projectName, fullPath };
 }
@@ -118,6 +143,9 @@ interface TokenUsage {
     cacheCreationTokens: number;
     totalTokens: number;
     model: string;
+    firstMessage: string;
+    sessionCreated: Date | null;
+    wasCleared: boolean;  // True if session ended with /clear command
 }
 
 // Determine context limit based on model
@@ -191,43 +219,113 @@ async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
         try {
             const stats = fs.statSync(jsonlPath);
             if (stats.size === 0) {
-                resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '' });
+                resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '', firstMessage: '', sessionCreated: null, wasCleared: false });
                 return;
             }
 
-            // Read the file and get the last line with input_tokens
+            // Read the file
             const content = fs.readFileSync(jsonlPath, 'utf-8');
-            const lines = content.trim().split('\n').reverse();
+            const lines = content.trim().split('\n');
 
-            for (const line of lines) {
+            // Scan backwards to find the last /clear command AND check for user activity after it
+            let lastClearIndex = -1;
+            let userMessagesAfterClear = 0;
+
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
                 if (!line.trim()) continue;
                 try {
                     const entry = JSON.parse(line);
-                    // Look for usage in message.usage (Claude API response format)
-                    const usage = entry.message?.usage || entry.usage;
-                    const model = entry.message?.model || '';
-                    if (usage) {
-                        const inputTokens = usage.input_tokens || 0;
-                        const cacheRead = usage.cache_read_input_tokens || 0;
-                        const cacheCreation = usage.cache_creation_input_tokens || 0;
-                        // Total context = all input tokens combined
-                        resolve({
-                            inputTokens,
-                            cacheReadTokens: cacheRead,
-                            cacheCreationTokens: cacheCreation,
-                            totalTokens: inputTokens + cacheRead + cacheCreation,
-                            model
-                        });
-                        return;
+
+                    // Check for User message
+                    if (entry.type === 'user' && entry.message?.content) {
+                        const msgContent = entry.message.content;
+
+                        // Check for /clear command
+                        if (typeof msgContent === 'string' && msgContent.includes('<command-name>/clear</command-name>')) {
+                            lastClearIndex = i;
+                            break; // Found the latest clear, stop scanning
+                        }
+
+                        // If not clear, it's a user message after the clear point (since we're going backwards)
+                        userMessagesAfterClear++;
                     }
                 } catch (e) {
-                    // Skip invalid JSON lines
                     continue;
                 }
             }
-            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '' });
+
+            // Determine if session is effectively cleared
+            // It is cleared IF:
+            // 1. We found a /clear command
+            // 2. AND there are NO user messages after it (meaning the user hasn't continued the session yet)
+            const wasCleared = (lastClearIndex !== -1 && userMessagesAfterClear === 0);
+
+            // Calculate usage and finding first message starting from AFTER the clear
+            const startIndex = lastClearIndex >= 0 ? lastClearIndex + 1 : 0;
+
+            let firstMessage = '';
+            let sessionCreated: Date | null = null;
+            let model = '';
+            let finalUsage = { inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0 };
+
+            // Forward pass from start index to find metadata and latest usage
+            for (let i = startIndex; i < lines.length; i++) {
+                const line = lines[i];
+                if (!line.trim()) continue;
+                try {
+                    const entry = JSON.parse(line);
+
+                    // Get session creation timestamp (first valid timestamp after clear)
+                    if (!sessionCreated && entry.timestamp) {
+                        sessionCreated = new Date(entry.timestamp);
+                    }
+
+                    // Look for first user message (for display)
+                    if (!firstMessage && entry.type === 'user' && entry.message?.content) {
+                        const msgContent = entry.message.content;
+                        // Skip command-related messages
+                        if (typeof msgContent === 'string' &&
+                            !msgContent.includes('<command-name>') &&
+                            !msgContent.includes('<local-command-') &&
+                            !msgContent.includes('Caveat:')) {
+                            firstMessage = msgContent.substring(0, 60);
+                        } else if (Array.isArray(msgContent) && msgContent[0]?.text) {
+                            firstMessage = msgContent[0].text.substring(0, 60);
+                        }
+                    }
+
+                    // Update latest usage/model as we go (capturing the last valid usage report)
+                    if (entry.message?.model) {
+                        model = entry.message.model;
+                    }
+                    if (entry.message?.usage || entry.usage) {
+                        const u = entry.message?.usage || entry.usage;
+                        finalUsage = {
+                            inputTokens: u.input_tokens || 0,
+                            cacheReadTokens: u.cache_read_input_tokens || 0,
+                            cacheCreationTokens: u.cache_creation_input_tokens || 0,
+                            totalTokens: (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0)
+                        };
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+
+            resolve({
+                inputTokens: finalUsage.inputTokens,
+                cacheReadTokens: finalUsage.cacheReadTokens,
+                cacheCreationTokens: finalUsage.cacheCreationTokens,
+                totalTokens: finalUsage.totalTokens,
+                model,
+                firstMessage: firstMessage ? firstMessage + '...' : '',
+                sessionCreated,
+                wasCleared
+            });
+
         } catch (e) {
-            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '' });
+            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '', firstMessage: '', sessionCreated: null, wasCleared: false });
         }
     });
 }
@@ -295,7 +393,10 @@ async function findActiveSessions(): Promise<SessionInfo[]> {
                         percentage: Math.round((usage.totalTokens / sessionContextLimit) * 100),
                         lastUpdated: file.mtime,
                         model: usage.model,
-                        contextLimit: sessionContextLimit
+                        contextLimit: sessionContextLimit,
+                        firstMessage: usage.firstMessage,
+                        sessionCreated: usage.sessionCreated,
+                        wasCleared: usage.wasCleared
                     });
                 }
             }
@@ -304,8 +405,85 @@ async function findActiveSessions(): Promise<SessionInfo[]> {
         console.error('Error scanning Claude projects:', e);
     }
 
-    // Sort by most recently active and limit to top 5
-    return sessions.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime()).slice(0, 5);
+    // Group sessions by base project name
+    const projectGroups = new Map<string, SessionInfo[]>();
+    for (const session of sessions) {
+        const base = session.projectName;
+        if (!projectGroups.has(base)) {
+            projectGroups.set(base, []);
+        }
+        projectGroups.get(base)!.push(session);
+    }
+
+    // Process each project group: filter superseded sessions and apply stable numbering
+    const finalSessions: SessionInfo[] = [];
+    for (const [baseName, group] of projectGroups) {
+        // Sort by session CREATION time (newest first) to identify supersession
+        group.sort((a, b) => {
+            const aTime = a.sessionCreated?.getTime() || 0;
+            const bTime = b.sessionCreated?.getTime() || 0;
+            return bTime - aTime;  // Newest first
+        });
+
+        // Filter out superseded sessions
+        // A session is "superseded" if:
+        // 1. A newer session exists that was created AFTER this session's last update
+        //    (meaning the user started a new session after abandoning this one)
+        // 2. OR it has wasCleared=true (ended with /clear, no activity after)
+
+        const activeSessions: SessionInfo[] = [];
+
+        for (let i = 0; i < group.length; i++) {
+            const session = group[i];
+
+            // Check if cleared
+            if (session.wasCleared) {
+                continue; // Skip cleared sessions
+            }
+
+            // Check if superseded by a newer session
+            let isSuperseded = false;
+            for (let j = 0; j < i; j++) {
+                const newerSession = group[j];
+                const newerCreated = newerSession.sessionCreated?.getTime() || 0;
+                const thisLastUpdated = session.lastUpdated.getTime();
+
+                // If a newer session was CREATED after this session's LAST UPDATE,
+                // then this session was abandoned and shouldn't be shown
+                if (newerCreated > thisLastUpdated) {
+                    isSuperseded = true;
+                    break;
+                }
+            }
+
+            if (!isSuperseded) {
+                activeSessions.push(session);
+            }
+        }
+
+        // Re-sort by creation time for stable numbering (oldest first)
+        activeSessions.sort((a, b) => {
+            const aTime = a.sessionCreated?.getTime() || 0;
+            const bTime = b.sessionCreated?.getTime() || 0;
+            return aTime - bTime;
+        });
+
+        // Apply stable numbering
+        for (let i = 0; i < activeSessions.length; i++) {
+            if (i === 0) {
+                activeSessions[i].projectName = baseName;
+            } else {
+                activeSessions[i].projectName = `${baseName}-${i + 1}`;
+            }
+        }
+
+        finalSessions.push(...activeSessions);
+    }
+
+    // Sort by mtime for display order (most recent first)
+    finalSessions.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+
+    return finalSessions.slice(0, 5);
 }
 
 function formatTokens(tokens: number): string {
@@ -415,9 +593,11 @@ async function refreshAllSessions() {
         // Set text color from project color map
         entry.item.color = projectColorMap.get(session.projectName) || '#ffffff';
 
-        // Detailed tooltip with full token breakdown
+        // Detailed tooltip with full token breakdown and first message
+        const firstMsgLine = session.firstMessage ? `💬 *"${session.firstMessage}"*\n\n` : '';
         entry.item.tooltip = new vscode.MarkdownString(
             `**${session.projectName}** (${session.sessionId})\n\n` +
+            firstMsgLine +
             `📁 \`${session.projectPath}\`\n\n` +
             `🤖 Model: \`${session.model || 'Unknown'}\`\n\n` +
             `📊 **Context Usage: ${session.percentage}%**\n\n` +

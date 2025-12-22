@@ -2,7 +2,7 @@
     "name": "claude-context-bar",
     "displayName": "Claude Context Bar",
     "description": "Real-time context window usage monitor for Claude Code sessions. See token counts in your status bar with color-coded warnings.",
-    "version": "1.1.3",
+    "version": "1.2.0",
     "publisher": "ezoosk",
     "author": {
         "name": "Ed Zisk",
