@@ -15,6 +15,8 @@ interface SessionInfo {
     totalTokens: number;
     percentage: number;
     lastUpdated: Date;
+    model: string;
+    contextLimit: number;
 }
 
 interface StatusBarEntry {
@@ -115,6 +117,17 @@ interface TokenUsage {
     cacheReadTokens: number;
     cacheCreationTokens: number;
     totalTokens: number;
+    model: string;
+}
+
+// Determine context limit based on model
+function getContextLimitForModel(model: string, userLimit: number): number {
+    // Sonnet 4.5 1M has 1 million token context
+    if (model.toLowerCase().includes('sonnet') && model.toLowerCase().includes('1m')) {
+        return 1000000;
+    }
+    // All other models (Sonnet 4.5, Opus 4.5, Haiku) have 200K
+    return userLimit;
 }
 
 async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
@@ -122,7 +135,7 @@ async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
         try {
             const stats = fs.statSync(jsonlPath);
             if (stats.size === 0) {
-                resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0 });
+                resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '' });
                 return;
             }
 
@@ -136,6 +149,7 @@ async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
                     const entry = JSON.parse(line);
                     // Look for usage in message.usage (Claude API response format)
                     const usage = entry.message?.usage || entry.usage;
+                    const model = entry.message?.model || '';
                     if (usage) {
                         const inputTokens = usage.input_tokens || 0;
                         const cacheRead = usage.cache_read_input_tokens || 0;
@@ -145,7 +159,8 @@ async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
                             inputTokens,
                             cacheReadTokens: cacheRead,
                             cacheCreationTokens: cacheCreation,
-                            totalTokens: inputTokens + cacheRead + cacheCreation
+                            totalTokens: inputTokens + cacheRead + cacheCreation,
+                            model
                         });
                         return;
                     }
@@ -154,9 +169,9 @@ async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
                     continue;
                 }
             }
-            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0 });
+            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '' });
         } catch (e) {
-            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0 });
+            resolve({ inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, totalTokens: 0, model: '' });
         }
     });
 }
@@ -210,6 +225,8 @@ async function findActiveSessions(): Promise<SessionInfo[]> {
                     const { name, fullPath } = decodeProjectPath(projectDir);
                     // Extract short session ID from filename
                     const sessionId = file.name.replace('.jsonl', '').substring(0, 8);
+                    // Auto-detect context limit based on model
+                    const sessionContextLimit = getContextLimitForModel(usage.model, contextLimit);
                     sessions.push({
                         projectName: name,
                         projectPath: fullPath,
@@ -219,8 +236,10 @@ async function findActiveSessions(): Promise<SessionInfo[]> {
                         cacheReadTokens: usage.cacheReadTokens,
                         cacheCreationTokens: usage.cacheCreationTokens,
                         totalTokens: usage.totalTokens,
-                        percentage: Math.round((usage.totalTokens / contextLimit) * 100),
-                        lastUpdated: file.mtime
+                        percentage: Math.round((usage.totalTokens / sessionContextLimit) * 100),
+                        lastUpdated: file.mtime,
+                        model: usage.model,
+                        contextLimit: sessionContextLimit
                     });
                 }
             }
@@ -248,6 +267,56 @@ async function refreshAllSessions() {
     const warningThreshold = config.get<number>('warningThreshold', 50);
     const dangerThreshold = config.get<number>('dangerThreshold', 75);
     const contextLimit = config.get<number>('contextLimit', 200000);
+    const autoColor = config.get<boolean>('autoColor', true);
+    const baseColor = config.get<string>('baseColor', 'White');
+
+    // Pastel color palette for auto-coloring
+    const pastelPalette = [
+        '#a8d8ea', // Soft blue
+        '#d4a5a5', // Dusty rose
+        '#b5d8c7', // Sage green
+        '#e8d5b7', // Warm beige
+        '#c9b1ff', // Lavender
+        '#ffd6a5', // Peach
+        '#caffbf', // Mint
+        '#bdb2ff', // Periwinkle
+        '#ffc6ff', // Pink
+    ];
+
+    // Base color variations (subtle shifts from user's chosen color)
+    const baseColorVariations: Record<string, string[]> = {
+        'White': ['#ffffff', '#f5f5f5', '#ebebeb', '#e0e0e0', '#d5d5d5'],
+        'Blue': ['#a8d8ea', '#9ecfe0', '#94c6d6', '#8abccc', '#80b2c2'],
+        'Purple': ['#c9b1ff', '#bfa7f5', '#b59deb', '#ab93e1', '#a189d7'],
+        'Cyan': ['#a0e7e5', '#96ddd9', '#8cd3cd', '#82c9c1', '#78bfb5'],
+        'Green': ['#b5d8c7', '#abcebd', '#a1c4b3', '#97baa9', '#8db09f'],
+        'Yellow': ['#ffeaa7', '#f5e09d', '#ebd693', '#e1cc89', '#d7c27f'],
+        'Orange': ['#ffd6a5', '#f5cc9b', '#ebc291', '#e1b887', '#d7ae7d'],
+        'Pink': ['#ffc6ff', '#f5bcf5', '#ebb2eb', '#e1a8e1', '#d79ed7'],
+    };
+
+    // Track project names to assign consistent colors
+    const projectColorMap = new Map<string, string>();
+    let colorIndex = 0;
+
+    if (autoColor) {
+        // Auto mode: use pastel palette
+        for (const session of sessions) {
+            if (!projectColorMap.has(session.projectName)) {
+                projectColorMap.set(session.projectName, pastelPalette[colorIndex % pastelPalette.length]);
+                colorIndex++;
+            }
+        }
+    } else {
+        // Manual mode: use variations of the base color
+        const variations = baseColorVariations[baseColor] || baseColorVariations['White'];
+        for (const session of sessions) {
+            if (!projectColorMap.has(session.projectName)) {
+                projectColorMap.set(session.projectName, variations[colorIndex % variations.length]);
+                colorIndex++;
+            }
+        }
+    }
 
     // Track which sessions we've seen
     const seenPaths = new Set<string>();
@@ -285,16 +354,20 @@ async function refreshAllSessions() {
             entry.item.backgroundColor = undefined;
         }
 
+        // Set text color from project color map
+        entry.item.color = projectColorMap.get(session.projectName) || '#ffffff';
+
         // Detailed tooltip with full token breakdown
         entry.item.tooltip = new vscode.MarkdownString(
             `**${session.projectName}** (${session.sessionId})\n\n` +
             `📁 \`${session.projectPath}\`\n\n` +
+            `🤖 Model: \`${session.model || 'Unknown'}\`\n\n` +
             `📊 **Context Usage: ${session.percentage}%**\n\n` +
             `| Type | Tokens |\n|------|--------|\n` +
             `| Cache Read | ${formatTokens(session.cacheReadTokens)} |\n` +
             `| Cache Creation | ${formatTokens(session.cacheCreationTokens)} |\n` +
             `| New Input | ${formatTokens(session.inputTokens)} |\n` +
-            `| **Total** | **${formatTokens(session.totalTokens)}** / ${formatTokens(contextLimit)} |\n\n` +
+            `| **Total** | **${formatTokens(session.totalTokens)}** / ${formatTokens(session.contextLimit)} |\n\n` +
             `🕐 Last updated: ${session.lastUpdated.toLocaleTimeString()}`
         );
 

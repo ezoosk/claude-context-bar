@@ -2,7 +2,7 @@
     "name": "claude-context-bar",
     "displayName": "Claude Context Bar",
     "description": "Real-time context window usage monitor for Claude Code sessions. See token counts in your status bar with color-coded warnings.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "publisher": "ezoosk",
     "author": {
         "name": "Ed Zisk",
@@ -64,6 +64,26 @@
                     "type": "number",
                     "default": 30,
                     "description": "Refresh interval in seconds"
+                },
+                "claudeContextBar.autoColor": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically assign different colors to each project (rainbow). When off, uses your base color with subtle variations."
+                },
+                "claudeContextBar.baseColor": {
+                    "type": "string",
+                    "enum": [
+                        "White",
+                        "Blue",
+                        "Purple",
+                        "Cyan",
+                        "Green",
+                        "Yellow",
+                        "Orange",
+                        "Pink"
+                    ],
+                    "default": "White",
+                    "description": "Base color when Auto Color is off. Each project gets a subtle variation of this color."
                 }
             }
         }

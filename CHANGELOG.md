@@ -2,6 +2,17 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.1.0] - 2024-12-22
+
+### Added
+- **Auto Color Mode**: Pastel color palette assigns different colors to each project automatically
+- **Base Color Selection**: When auto-color is off, choose a base color with subtle variations per project
+- **Auto Context Limit Detection**: Automatically detects model (Sonnet 4.5 1M vs others) and adjusts context limit
+- Model name now displayed in tooltip
+
+### Changed
+- Color palette changed to softer pastel colors for better readability
+
 ## [1.0.0] - 2024-12-22
 
 ### Added
