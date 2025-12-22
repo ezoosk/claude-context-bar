@@ -1,0 +1,13 @@
+# Ignore built files
+out/
+node_modules/
+*.vsix
+
+# IDE
+.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# OS
+.DS_Store
+Thumbs.db

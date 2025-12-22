@@ -1,0 +1,8 @@
+**/.git
+**/.svn
+**/.hg
+**/CVS
+**/.DS_Store
+**/Thumbs.db
+**/node_modules
+**/*.vsix
