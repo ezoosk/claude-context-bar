@@ -3,6 +3,9 @@ out/
 node_modules/
 *.vsix
 
+# Dev-only docs (not for public repo)
+DEV-README.md
+
 # IDE
 .vscode/
 !.vscode/launch.json
