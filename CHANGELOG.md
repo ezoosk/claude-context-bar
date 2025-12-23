@@ -2,6 +2,11 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.2.2] - 2025-12-23
+
+### Fixed
+- Documentation updates
+
 ## [1.2.1] - 2025-12-23
 
 ### Fixed
