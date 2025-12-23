@@ -5,6 +5,7 @@ node_modules/
 
 # Dev-only docs (not for public repo)
 DEV-README.md
+INTERNAL-DEV-NOTES.md
 
 # IDE
 .vscode/

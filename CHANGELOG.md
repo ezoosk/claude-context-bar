@@ -2,6 +2,13 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.2.1] - 2025-12-23
+
+### Fixed
+- **Project Name Display**: Fixed issue where parent folder (e.g., "dev") was incorrectly included in project names
+  - Now correctly shows "my-project" instead of "dev-my-project"
+- **Tooltip Cleanup**: Removed confusing "New Input" row (always showed ~8 tokens)
+
 ## [1.2.0] - 2025-12-22
 
 ### Added
@@ -9,6 +16,7 @@ All notable changes to the Claude Context Bar extension will be documented in th
   - Sessions are hidden immediately when superseded by a newer session
   - Properly handles `/clear` command scenarios
   - No more lingering status bar items from closed tabs
+- **First Message in Tooltip**: Shows the first message of each session to help identify which Claude Code tab it corresponds to
 
 ### Fixed
 - Ghost sessions no longer appear after running `/clear` and continuing work

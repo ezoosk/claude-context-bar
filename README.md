@@ -27,8 +27,9 @@
 - Danger (red background): Over 75% usage
 
 📊 **Detailed Tooltips** — Hover to see:
+- First message (matches Claude Code tab name)
 - Model name
-- Cache Read / Cache Creation / New Input tokens
+- Cache Read / Cache Creation tokens
 - Total context used vs limit
 - Last updated time
 

@@ -88,33 +88,35 @@ function getClaudeProjectsDir(): string {
 }
 
 function decodeProjectPath(encodedName: string): { name: string; fullPath: string } {
-    // Claude encodes paths like: -c-dev-amaran-light-bot or -Users-Ed-work-my-project
-    // The dashes represent path separators, BUT folder names can also contain dashes
+    // Claude encodes paths like: C--dev-amaran-light-bot or -Users-Ed-work-my-project
+    // The double-dash after drive letter represents the colon (C: -> C--)
+    // Single dashes represent path separators, BUT folder names can also contain dashes
     // 
     // Strategy: Detect OS from the pattern and reconstruct path
     let decoded = encodedName;
 
-    // Remove leading dash
+    // Remove leading dash if present
     if (decoded.startsWith('-')) {
         decoded = decoded.substring(1);
     }
 
-    // Split by dashes
-    const parts = decoded.split('-');
+    // Split by dashes and filter out empty strings (from double-dashes)
+    const parts = decoded.split('-').filter(p => p.length > 0);
     let fullPath: string;
     let projectName: string;
 
     // Check if Windows pattern (first part is single drive letter like 'c', 'd', etc.)
     if (parts.length > 0 && parts[0].length === 1 && /[a-zA-Z]/.test(parts[0])) {
         // Windows path: C:\dev\amaran-light-bot
-        // Claude typically encodes as: -c-dev-amaran-light-bot
-        // We need at least 2 parts for drive + first folder
+        // Claude typically encodes as: C--dev-amaran-light-bot
+        // After filtering empty strings: ['C', 'dev', 'amaran', 'light', 'bot']
         fullPath = parts[0].toUpperCase() + ':\\' + parts.slice(1).join('\\');
 
-        // Project name: use last 3 parts joined with dashes (handles names like amaran-light-bot)
-        // This is a heuristic - most project names are 1-3 dash-separated words
+        // Project name: everything after drive + first folder (usually 'dev' or 'Users')
+        // For C:\dev\Abletron -> parts = ['C', 'dev', 'Abletron'] -> projectName = 'Abletron'
+        // For C:\dev\amaran-light-bot -> parts = ['C', 'dev', 'amaran', 'light', 'bot'] -> 'amaran-light-bot'
         if (parts.length >= 3) {
-            // Take everything after drive + first folder (usually 'dev' or 'Users')
+            // Skip drive letter and first folder (index 0 and 1)
             const projectParts = parts.slice(2);
             projectName = projectParts.join('-');
         } else {
@@ -604,7 +606,6 @@ async function refreshAllSessions() {
             `| Type | Tokens |\n|------|--------|\n` +
             `| Cache Read | ${formatTokens(session.cacheReadTokens)} |\n` +
             `| Cache Creation | ${formatTokens(session.cacheCreationTokens)} |\n` +
-            `| New Input | ${formatTokens(session.inputTokens)} |\n` +
             `| **Total** | **${formatTokens(session.totalTokens)}** / ${formatTokens(session.contextLimit)} |\n\n` +
             `🕐 Last updated: ${session.lastUpdated.toLocaleTimeString()}`
         );
