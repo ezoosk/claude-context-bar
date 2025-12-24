@@ -2,6 +2,21 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.3.0] - 2025-12-24
+
+### Added
+- **Click to Hide**: Click any status bar item to temporarily hide it
+  - Hidden sessions automatically reappear when there's new activity
+  - Great for dismissing stale sessions you're not actively using
+- **Configurable Idle Timeout**: New `idleTimeout` setting (default: 180 seconds / 3 minutes)
+  - Sessions inactive longer than this are automatically hidden
+  - Reduced from previous hardcoded 5 minutes
+  - Range: 10-600 seconds
+
+### Fixed
+- **Project Name Display**: Fixed deeply nested paths showing full folder chain
+  - Now correctly shows last 3 path segments (e.g., "claude-context-bar" instead of "Tools-extensions-vscode-claude-context-bar")
+
 ## [1.2.2] - 2025-12-23
 
 ### Fixed

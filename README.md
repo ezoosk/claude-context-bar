@@ -37,6 +37,8 @@
 
 🧹 **Smart Session Detection** — Automatically hides "ghost" sessions when you close tabs or run `/clear`
 
+👆 **Click to Hide** — Click any context bar item to temporarily hide it; reappears on new activity
+
 ## Requirements
 
 - VS Code 1.74.0 or later
@@ -57,6 +59,7 @@
 | `claudeContextBar.warningThreshold` | `50` | Percentage for yellow warning |
 | `claudeContextBar.dangerThreshold` | `75` | Percentage for red danger |
 | `claudeContextBar.refreshInterval` | `30` | Refresh interval in seconds |
+| `claudeContextBar.idleTimeout` | `180` | Seconds of inactivity before hiding a session (3 minutes) |
 
 ## How It Works
 
@@ -65,7 +68,7 @@ The extension reads Claude Code's session files from `~/.claude/projects/` and c
 - **Claude Sonnet 4.5 1M**: 1,000,000 tokens
 - **All other models** (Sonnet 4.5, Opus 4.5, Haiku): 200,000 tokens
 
-Sessions inactive for more than 5 minutes are automatically hidden. The extension also detects when sessions have been superseded by newer ones (e.g., after running `/clear` and opening a new tab), hiding ghost sessions immediately.
+Sessions inactive for more than 3 minutes (configurable via `idleTimeout`) are automatically hidden. The extension also detects when sessions have been superseded by newer ones (e.g., after running `/clear` and opening a new tab), hiding ghost sessions immediately.
 
 ## License
 
