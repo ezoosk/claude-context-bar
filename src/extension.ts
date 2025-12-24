@@ -28,11 +28,21 @@ interface StatusBarEntry {
 }
 
 const statusBarItems: Map<string, StatusBarEntry> = new Map();
+// Track manually hidden sessions: sessionFile -> timestamp when hidden
+const hiddenSessions: Map<string, number> = new Map();
 let fileWatcher: fs.FSWatcher | null = null;
 let refreshInterval: NodeJS.Timeout | null = null;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Claude Context Bar is now active');
+
+    // Register command to hide a session (triggered by clicking status bar item)
+    const hideCommand = vscode.commands.registerCommand('claudeContextBar.hideSession', (sessionFile: string) => {
+        hiddenSessions.set(sessionFile, Date.now());
+        // Immediately refresh to hide the item
+        refreshAllSessions();
+    });
+    context.subscriptions.push(hideCommand);
 
     // Initial scan
     refreshAllSessions();
@@ -112,12 +122,13 @@ function decodeProjectPath(encodedName: string): { name: string; fullPath: strin
         // After filtering empty strings: ['C', 'dev', 'amaran', 'light', 'bot']
         fullPath = parts[0].toUpperCase() + ':\\' + parts.slice(1).join('\\');
 
-        // Project name: everything after drive + first folder (usually 'dev' or 'Users')
+        // Project name: use last few segments only (not full path chain)
         // For C:\dev\Abletron -> parts = ['C', 'dev', 'Abletron'] -> projectName = 'Abletron'
-        // For C:\dev\amaran-light-bot -> parts = ['C', 'dev', 'amaran', 'light', 'bot'] -> 'amaran-light-bot'
+        // For C:\dev\Tools\extensions\vscode\claude-context-bar -> use last 3 parts -> 'claude-context-bar'
         if (parts.length >= 3) {
-            // Skip drive letter and first folder (index 0 and 1)
-            const projectParts = parts.slice(2);
+            // Skip drive letter and first folder, but limit to last 3 segments for deeply nested paths
+            const startIndex = Math.max(2, parts.length - 3);
+            const projectParts = parts.slice(startIndex);
             projectName = projectParts.join('-');
         } else {
             projectName = parts[parts.length - 1] || 'Unknown';
@@ -342,9 +353,10 @@ async function findActiveSessions(): Promise<SessionInfo[]> {
 
     const config = vscode.workspace.getConfiguration('claudeContextBar');
     const contextLimit = config.get<number>('contextLimit', 200000);
+    const idleTimeout = config.get<number>('idleTimeout', 180);
 
-    // Only look at sessions modified in the last 5 minutes (active sessions)
-    const cutoffTime = Date.now() - (5 * 60 * 1000);
+    // Only look at sessions modified within the idle timeout (active sessions)
+    const cutoffTime = Date.now() - (idleTimeout * 1000);
 
     try {
         const projectDirs = fs.readdirSync(claudeDir);
@@ -485,7 +497,22 @@ async function findActiveSessions(): Promise<SessionInfo[]> {
     // Sort by mtime for display order (most recent first)
     finalSessions.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
 
-    return finalSessions.slice(0, 5);
+    // Filter out manually hidden sessions, but auto-unhide if there's new activity
+    const visibleSessions = finalSessions.filter(session => {
+        const hiddenAt = hiddenSessions.get(session.sessionFile);
+        if (hiddenAt) {
+            // Check if session was modified after it was hidden
+            if (session.lastUpdated.getTime() > hiddenAt) {
+                // New activity! Remove from hidden list
+                hiddenSessions.delete(session.sessionFile);
+                return true; // Show it
+            }
+            return false; // Still hidden
+        }
+        return true; // Not hidden
+    });
+
+    return visibleSessions.slice(0, 5);
 }
 
 function formatTokens(tokens: number): string {
@@ -607,8 +634,16 @@ async function refreshAllSessions() {
             `| Cache Read | ${formatTokens(session.cacheReadTokens)} |\n` +
             `| Cache Creation | ${formatTokens(session.cacheCreationTokens)} |\n` +
             `| **Total** | **${formatTokens(session.totalTokens)}** / ${formatTokens(session.contextLimit)} |\n\n` +
-            `🕐 Last updated: ${session.lastUpdated.toLocaleTimeString()}`
+            `🕐 Last updated: ${session.lastUpdated.toLocaleTimeString()}\n\n` +
+            `*Click to hide*`
         );
+
+        // Click to hide this session
+        entry.item.command = {
+            command: 'claudeContextBar.hideSession',
+            title: 'Hide Session',
+            arguments: [session.sessionFile]
+        };
 
         entry.item.show();
     }
