@@ -39,6 +39,8 @@
 
 👆 **Click to Hide** — Click any context bar item to temporarily hide it; reappears on new activity
 
+📐 **Compact Mode** — Shorten project names to save space (my-cool-project → MCP, typescript → Tscript)
+
 ## Requirements
 
 - VS Code 1.74.0 or later
@@ -60,6 +62,8 @@
 | `claudeContextBar.dangerThreshold` | `75` | Percentage for red danger |
 | `claudeContextBar.refreshInterval` | `30` | Refresh interval in seconds |
 | `claudeContextBar.idleTimeout` | `180` | Seconds of inactivity before hiding a session (3 minutes) |
+| `claudeContextBar.compactMode` | `false` | Shorten project names to save status bar space |
+| `claudeContextBar.shortNames` | `{}` | Custom short names for projects (e.g., `{"my-project": "MP"}`) |
 
 ## How It Works
 

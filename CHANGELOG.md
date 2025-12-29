@@ -2,6 +2,11 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.4.1] - 2025-12-29
+
+### Fixed
+- Added compact mode documentation to README
+
 ## [1.4.0] - 2025-12-29
 
 ### Added
