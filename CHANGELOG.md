@@ -2,6 +2,17 @@
 
 All notable changes to the Claude Context Bar extension will be documented in this file.
 
+## [1.4.0] - 2025-12-29
+
+### Added
+- **Compact Mode**: Shorten project names to save status bar space
+  - Multi-word names become acronyms (my-cool-project → MCP)
+  - Single words become abbreviated (typescript → Tscript)
+  - Names 5 characters or less stay unchanged
+  - Session numbers preserved (MCP-2, MCP-3)
+- **Custom Short Names**: Define your own abbreviations via `shortNames` setting
+- **Instant Settings Refresh**: All settings now apply immediately without waiting for next refresh cycle
+
 ## [1.3.0] - 2025-12-24
 
 ### Added

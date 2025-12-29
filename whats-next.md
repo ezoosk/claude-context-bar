@@ -1,18 +1,6 @@
 # What's Next - Claude Context Bar
 
-## Current Version: 1.3.0
-
-## Recently Completed (v1.3.0)
-
-### Click to Hide
-- Click any status bar item to temporarily hide it
-- Hidden sessions auto-reappear when there's new activity (file modified after hide)
-- Stored in memory (resets on extension reload)
-
-### Configurable Idle Timeout
-- New `idleTimeout` setting (default: 180 seconds / 3 minutes, was hardcoded 5 minutes)
-- Range: 10-600 seconds
-- Sessions inactive longer than this are automatically filtered out
+## Current Version: 1.4.0
 
 ## Potential Future Features
 

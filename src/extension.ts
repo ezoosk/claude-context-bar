@@ -44,6 +44,14 @@ export function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(hideCommand);
 
+    // Listen for configuration changes and refresh immediately
+    const configWatcher = vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('claudeContextBar')) {
+            refreshAllSessions();
+        }
+    });
+    context.subscriptions.push(configWatcher);
+
     // Initial scan
     refreshAllSessions();
 
@@ -98,7 +106,7 @@ function getClaudeProjectsDir(): string {
 }
 
 function decodeProjectPath(encodedName: string): { name: string; fullPath: string } {
-    // Claude encodes paths like: C--dev-amaran-light-bot or -Users-Ed-work-my-project
+    // Claude encodes paths like: C--dev-my-cool-project or -Users-name-work-my-project
     // The double-dash after drive letter represents the colon (C: -> C--)
     // Single dashes represent path separators, BUT folder names can also contain dashes
     // 
@@ -117,14 +125,14 @@ function decodeProjectPath(encodedName: string): { name: string; fullPath: strin
 
     // Check if Windows pattern (first part is single drive letter like 'c', 'd', etc.)
     if (parts.length > 0 && parts[0].length === 1 && /[a-zA-Z]/.test(parts[0])) {
-        // Windows path: C:\dev\amaran-light-bot
-        // Claude typically encodes as: C--dev-amaran-light-bot
-        // After filtering empty strings: ['C', 'dev', 'amaran', 'light', 'bot']
+        // Windows path: C:\dev\my-cool-project
+        // Claude typically encodes as: C--dev-my-cool-project
+        // After filtering empty strings: ['C', 'dev', 'my', 'cool', 'project']
         fullPath = parts[0].toUpperCase() + ':\\' + parts.slice(1).join('\\');
 
         // Project name: use last few segments only (not full path chain)
-        // For C:\dev\Abletron -> parts = ['C', 'dev', 'Abletron'] -> projectName = 'Abletron'
-        // For C:\dev\Tools\extensions\vscode\claude-context-bar -> use last 3 parts -> 'claude-context-bar'
+        // For C:\dev\webapp -> parts = ['C', 'dev', 'webapp'] -> projectName = 'webapp'
+        // For C:\dev\tools\extensions\vscode\my-extension -> use last 3 parts -> 'my-extension'
         if (parts.length >= 3) {
             // Skip drive letter and first folder, but limit to last 3 segments for deeply nested paths
             const startIndex = Math.max(2, parts.length - 3);
@@ -225,6 +233,61 @@ function getEmojiForProject(projectName: string): string {
 
     // Default brain emoji for coding/AI projects
     return '🧠';
+}
+
+// Extract the last syllable from a word for compact naming
+// "typescript" → "script", "webpack" → "pack", "frontend" → "tend"
+function extractLastSyllable(word: string): string {
+    // Find a consonant cluster followed by vowel(s) followed by optional consonants at the end
+    // This captures common syllable patterns like "tron", "script", "pack"
+    const match = word.match(/[bcdfghjklmnpqrstvwxz]+[aeiou]+[bcdfghjklmnpqrstvwxz]*$/i);
+    if (match) {
+        return match[0];
+    }
+    // Fallback: just return last 3-4 chars
+    return word.slice(-Math.min(4, word.length));
+}
+
+// Generate a short name for a project
+// Multi-word: "my-cool-project" → "MCP" (acronym)
+// Single-word: "typescript" → "Tscript" (first letter + last syllable)
+// Short names (≤3 chars) are kept as-is
+// Session numbers (-2, -3) are preserved
+function getShortName(projectName: string, customNames: Record<string, string>): string {
+    // Check custom override first (check both full name and base name)
+    if (customNames[projectName]) {
+        return customNames[projectName];
+    }
+
+    // Extract session number suffix if present (e.g., "my-project-2" → "-2")
+    const sessionMatch = projectName.match(/-(\d+)$/);
+    const sessionSuffix = sessionMatch ? sessionMatch[0] : '';
+    const baseName = sessionMatch ? projectName.slice(0, -sessionSuffix.length) : projectName;
+
+    // Check custom override for base name too
+    if (customNames[baseName]) {
+        return customNames[baseName] + sessionSuffix;
+    }
+
+    // If base name is already short (5 chars or less), don't shorten
+    if (baseName.length <= 5) {
+        return projectName;
+    }
+
+    // Split on common delimiters (dash, underscore, space) or camelCase boundaries
+    const words = baseName.split(/[-_\s]|(?=[A-Z])/).filter(w => w.length > 0);
+
+    let shortBase: string;
+    if (words.length > 1) {
+        // Multi-word: create acronym from first letter of each word
+        shortBase = words.map(w => w[0]?.toUpperCase() || '').join('');
+    } else {
+        // Single-word: first letter uppercase + last syllable
+        const lastSyllable = extractLastSyllable(baseName);
+        shortBase = baseName[0].toUpperCase() + lastSyllable;
+    }
+
+    return shortBase + sessionSuffix;
 }
 
 async function getLatestTokenCount(jsonlPath: string): Promise<TokenUsage> {
@@ -533,6 +596,8 @@ async function refreshAllSessions() {
     const autoColor = config.get<boolean>('autoColor', true);
     const baseColor = config.get<string>('baseColor', 'White');
     const showEmoji = config.get<boolean>('showEmoji', true);
+    const compactMode = config.get<boolean>('compactMode', false);
+    const shortNames = config.get<Record<string, string>>('shortNames', {});
 
     // Pastel color palette for auto-coloring
     const pastelPalette = [
@@ -608,7 +673,8 @@ async function refreshAllSessions() {
         // Update the status bar item with fuzzy emoji matching
         const icon = showEmoji ? getEmojiForProject(session.projectName) : '';
         const iconSpace = showEmoji ? ' ' : '';
-        entry.item.text = `${icon}${iconSpace}${session.projectName}: ${session.percentage}%`;
+        const displayName = compactMode ? getShortName(session.projectName, shortNames) : session.projectName;
+        entry.item.text = `${icon}${iconSpace}${displayName}: ${session.percentage}%`;
 
         // Set background color based on thresholds
         if (session.percentage >= dangerThreshold) {

@@ -2,7 +2,7 @@
     "name": "claude-context-bar",
     "displayName": "Claude Context Bar",
     "description": "Real-time context window usage monitor for Claude Code sessions. See token counts in your status bar with color-coded warnings.",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "publisher": "ezoosk",
     "author": {
         "name": "Ed Zisk",
@@ -45,26 +45,6 @@
         "configuration": {
             "title": "Claude Context Bar",
             "properties": {
-                "claudeContextBar.contextLimit": {
-                    "type": "number",
-                    "default": 200000,
-                    "description": "Maximum context window size in tokens"
-                },
-                "claudeContextBar.warningThreshold": {
-                    "type": "number",
-                    "default": 50,
-                    "description": "Percentage at which to show warning color (yellow)"
-                },
-                "claudeContextBar.dangerThreshold": {
-                    "type": "number",
-                    "default": 75,
-                    "description": "Percentage at which to show danger color (red)"
-                },
-                "claudeContextBar.refreshInterval": {
-                    "type": "number",
-                    "default": 30,
-                    "description": "Refresh interval in seconds"
-                },
                 "claudeContextBar.autoColor": {
                     "type": "boolean",
                     "default": true,
@@ -90,12 +70,42 @@
                     "default": true,
                     "description": "Show emoji icons based on project name (music 🎵, code 💻, game 🎮, etc.)"
                 },
+                "claudeContextBar.contextLimit": {
+                    "type": "number",
+                    "default": 200000,
+                    "description": "Maximum context window size in tokens"
+                },
+                "claudeContextBar.warningThreshold": {
+                    "type": "number",
+                    "default": 50,
+                    "description": "Percentage at which to show warning color (yellow)"
+                },
+                "claudeContextBar.dangerThreshold": {
+                    "type": "number",
+                    "default": 75,
+                    "description": "Percentage at which to show danger color (red)"
+                },
+                "claudeContextBar.refreshInterval": {
+                    "type": "number",
+                    "default": 30,
+                    "description": "Refresh interval in seconds"
+                },
                 "claudeContextBar.idleTimeout": {
                     "type": "number",
                     "default": 180,
                     "minimum": 10,
                     "maximum": 600,
                     "description": "Seconds of inactivity before hiding a session (default: 180 / 3 minutes). Click to manually hide."
+                },
+                "claudeContextBar.compactMode": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Shorten project names to save status bar space. Multi-word names become acronyms (my-cool-project → MCP), single words become abbreviated (typescript → Tscript). Names ≤5 chars stay unchanged."
+                },
+                "claudeContextBar.shortNames": {
+                    "type": "object",
+                    "default": {},
+                    "description": "Custom short names for projects. Keys are project names, values are the short versions (e.g. {\"my-cool-project\": \"MCP\", \"webapp\": \"WA\"})."
                 }
             }
         }
